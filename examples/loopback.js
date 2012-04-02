@@ -16,6 +16,9 @@ var Loopback = function(options) {
 
 util.inherits(Loopback, FileSystem);
 
+var fsData= { inodes: {}, last_inode: 1 };
+
+
 (function() {
     this.init = function(connInfo) {
         console.log(connInfo);
@@ -29,32 +32,36 @@ util.inherits(Loopback, FileSystem);
 
     this.lookup = function(context, parent, name, reply) {
         console.log('Lookup!');
+        console.log(parent);
         console.log(context);
         console.log(name);
-        var entry = {
-            inode: 1234,
-            generation: 2,
-            attr: {
-                dev: 234881026,
-                ino: 13420595,
-                mode: 33188,
-                nlink: 1,
-                uid: 501,
-                gid: 20,
-                rdev: 0,
-                size: 11,
-                blksize: 4096,
-                blocks: 8,
-                atime: 1331780451475, //Date.now();
-                mtime: 1331780451475, //Date.now();
-                ctime: 1331780451475, //Date.now();
-            },
-            attr_timeout: 30, //in seconds
-            entry_timeout: 60 //in seconds
-        };
 
-        reply.entry(entry);
-        //reply.err(PosixError.ENOENT);
+	if(name == '._.') {
+            var entry = {
+		inode: parent,
+		generation: 0,
+		attr: {
+                    // dev: 234881026,
+                    inode: parent,
+                    mode: 16877,
+                    nlink: 2,
+                    uid: 501,
+                    gid: 20,
+                    rdev: 0,
+                    size: 0,
+                    blksize: 512,
+                    blocks: 1,
+                    atime: 1331780451475, //Date.now();
+                    mtime: 1331780451475, //Date.now();
+                    ctime: 1331780451475, //Date.now();
+		},
+		attr_timeout: 30, //in seconds
+		entry_timeout: 60 //in seconds
+            };
+            reply.entry(entry);
+	} else {
+	    reply.err(PosixError.ENOENT);
+	}
     };
 
     this.forget = function(context, inode, nlookup) {
@@ -69,19 +76,19 @@ util.inherits(Loopback, FileSystem);
         var hello = "Hello World!\n";
         //stat object
         var attrs = {
-            //dev: 0,
-            ino: 1,
+            // dev: 0,
+            inode: inode,
             mode: 16877,
-            nlink: 1,
-            //uid: 501,
-            //gid: 20,
-            //rdev: 0,
-            size: hello.length,
-            //blksize: 4096,
-            //blocks: 8,
-            //atime: 1331780451475, //Date.now();
-            //mtime: 1331780451475, //Date.now();
-            //ctime: 1331780451475, //Date.now();
+            nlink: 2,
+            uid: 501,
+            gid: 20,
+            rdev: 0,
+            size: 0,
+            blksize: 512,
+            blocks: 1,
+            atime: 1331780451475, //Date.now();
+            mtime: 1331780451475, //Date.now();
+            ctime: 1331780451475 //Date.now();
         };
         reply.attr(attrs, 1000);
         //reply.err(PosixError.EIO);
@@ -103,8 +110,37 @@ util.inherits(Loopback, FileSystem);
 
     this.mknod = function(context, parent, name, mode, rdev, reply) {
         console.log('Mknod was called!');
-        reply.err(PosixError.ENOENT);
-        //reply.entry(entry);
+	console.log(parent);
+	console.log(name);
+	console.log(mode);
+	console.log(rdev);
+
+        var entry = {
+	    inode: ++fsData.last_inode,
+	    generation: 0,
+	    attr: {
+		// it should be ino but needs to be inode
+		inode: fsData.last_inode,
+		mode: mode,
+		nlink: 1,
+                uid: 501,
+                gid: 20,
+                rdev: 0,
+                size: 0,
+                blksize: 512,
+                blocks: 1,
+                atime: Date.now(),
+                mtime: Date.now(),
+                ctime: Date.now()
+	    },
+	    attr_timeout: 30, //in seconds
+	    entry_timeout: 60 //in seconds
+        };
+
+	fsData[fsData.last_inode]= { parent: parent, name: name, mode: mode, rdev: rdev };
+
+        reply.entry(entry, 1000);
+        // reply.err(PosixError.ENOENT);
     };
 
     this.mkdir = function(context, parent, name, mode, reply) {
@@ -152,7 +188,7 @@ util.inherits(Loopback, FileSystem);
     };
 
     this.write = function() {
-
+	console.log('Write was called??');
     };
 
     this.flush = function() {
